@@ -1,0 +1,404 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Source Serif 4', Charter, 'Bitstream Charter', Georgia, serif;
+  background: #f5f0e8;
+  color: #333;
+  min-height: 100vh;
+  padding: 1.5rem;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+header h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #c0392b;
+}
+
+.title-glyph {
+  height: 2.5rem;
+  display: inline-block;
+  vertical-align: baseline;
+  margin: 0 1px;
+}
+
+.title-char {
+  display: inline-block;
+}
+
+.subtitle {
+  color: #777;
+  margin-top: 0.25rem;
+}
+
+main {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+/* Side-by-side workspace */
+#workspace {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+#workspace > section {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 768px) {
+  #workspace {
+    flex-direction: column;
+  }
+}
+
+/* Upload */
+#upload-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+#upload-area {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 140px;
+  padding: 1rem;
+  border: 2px dashed #ccc;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  overflow: hidden;
+  position: relative;
+}
+
+#upload-area:hover,
+#upload-area.dragover {
+  border-color: #c0392b;
+  background: rgba(192, 57, 43, 0.05);
+}
+
+.upload-prompt {
+  color: #888;
+  font-size: 1.1rem;
+  text-align: center;
+}
+
+#random-page {
+  padding: 0.5rem 1rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: #ece7df;
+  color: #555;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.85rem;
+  transition: background 0.2s;
+}
+
+#random-page:hover {
+  background: #e0dbd3;
+}
+
+#random-page em {
+  font-style: italic;
+}
+
+#preview-canvas {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 10px;
+}
+
+#preview-canvas[hidden] {
+  display: none;
+}
+
+/* Progress */
+#progress-bar {
+  width: 100%;
+  height: 28px;
+  background: #e8e3db;
+  border-radius: 14px;
+  overflow: hidden;
+  position: relative;
+}
+
+#progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #c0392b, #e67e22);
+  border-radius: 14px;
+  transition: width 0.3s ease;
+}
+
+#progress-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  color: #333;
+  pointer-events: none;
+}
+
+/* Repertoire */
+#repertoire-section h2 {
+  margin-bottom: 0.75rem;
+  font-size: 1.2rem;
+}
+
+#glyph-count {
+  font-weight: normal;
+  color: #888;
+  font-size: 0.9rem;
+}
+
+#repertoire-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+#repertoire-filters[hidden] {
+  display: none;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.filter-group label {
+  font-size: 0.75rem;
+}
+
+.filter-histogram {
+  display: block;
+  border-radius: 2px;
+}
+
+.dual-range {
+  position: relative;
+  width: 140px;
+  height: 20px;
+}
+
+.dual-range input[type="range"] {
+  position: absolute;
+  width: 100%;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  accent-color: #c0392b;
+}
+
+.dual-range input[type="range"]::-webkit-slider-thumb {
+  pointer-events: auto;
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #c0392b;
+  cursor: pointer;
+  border: 2px solid #fff;
+  box-shadow: 0 0 2px rgba(0,0,0,0.3);
+}
+
+.dual-range input[type="range"]::-moz-range-thumb {
+  pointer-events: auto;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #c0392b;
+  cursor: pointer;
+  border: 2px solid #fff;
+  box-shadow: 0 0 2px rgba(0,0,0,0.3);
+}
+
+#clear-repertoire {
+  padding: 0.4rem 1rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: #ece7df;
+  color: #555;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.8rem;
+  transition: background 0.2s;
+  white-space: nowrap;
+  align-self: flex-end;
+  margin-left: auto;
+}
+
+#clear-repertoire:hover {
+  background: #e0dbd3;
+}
+
+#repertoire-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 60px;
+  max-height: 70vh;
+  overflow-y: auto;
+  padding: 0.75rem;
+  background: #ece7df;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+}
+
+.glyph-cell {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f0e8;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.glyph-cell img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.glyph-cell .glyph-label {
+  position: absolute;
+  bottom: 1px;
+  right: 3px;
+  font-size: 0.55rem;
+  color: #c0392b;
+  font-weight: bold;
+  text-shadow: 0 0 3px #f5f0e8;
+}
+
+/* Type Editor */
+#editor-section h2 {
+  margin-bottom: 0.75rem;
+  font-size: 1.2rem;
+}
+
+#type-editor {
+  min-height: 200px;
+  padding: 1rem;
+  background: #faf7f2;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  font-size: 1rem;
+  line-height: 1.6;
+  outline: none;
+  color: #333;
+  cursor: text;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  align-content: flex-start;
+  gap: 2px;
+}
+
+#type-editor .placeholder {
+  color: #aaa;
+  font-style: italic;
+  pointer-events: none;
+}
+
+#type-editor .glyph-img {
+  height: 2em;
+  display: inline-block;
+  vertical-align: baseline;
+  image-rendering: auto;
+}
+
+#type-editor .space-char {
+  display: inline-block;
+  width: 0.6em;
+}
+
+#type-editor .newline {
+  flex-basis: 100%;
+  height: 0;
+}
+
+#type-editor .fallback-char {
+  font-family: monospace;
+  font-size: 1.8em;
+  color: #666;
+  display: inline-flex;
+  align-items: flex-end;
+  height: 2rem;
+}
+
+#editor-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+#editor-controls[hidden] {
+  display: none;
+}
+
+#editor-controls button {
+  padding: 0.4rem 1rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: #ece7df;
+  color: #333;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background 0.2s;
+}
+
+#editor-controls button:hover {
+  background: #e0dbd3;
+}
+
+/* Colophon */
+footer {
+  text-align: center;
+  padding: 2rem 0 1rem;
+  font-size: 0.8rem;
+  color: #999;
+}
+
+footer a {
+  color: #888;
+  text-decoration: underline;
+  text-decoration-color: #ccc;
+}
+
+footer a:hover {
+  color: #c0392b;
+}
