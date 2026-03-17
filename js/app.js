@@ -93,15 +93,23 @@ function showPreview(img) {
 const MANIFEST_URL = "https://iiif.archive.org/iiif/convenientbookof00allirich/manifest.json";
 const randomPageBtn = document.getElementById("random-page");
 
+// Prefetch manifest on page load so the button feels instant
+let manifestPromise = fetch(MANIFEST_URL).then((r) => r.json()).catch(() => null);
+
 randomPageBtn.addEventListener("click", loadRandomPage);
 
 async function loadRandomPage() {
   if (processing) return;
-  showProgress("Fetching manifest…", 2);
 
   try {
-    const resp = await fetch(MANIFEST_URL);
-    const manifest = await resp.json();
+    let manifest = await manifestPromise;
+    if (!manifest) {
+      // Retry if prefetch failed
+      showProgress("Fetching manifest…", 2);
+      manifest = await fetch(MANIFEST_URL).then((r) => r.json());
+      manifestPromise = Promise.resolve(manifest);
+    }
+
     const canvases = manifest.items || [];
     if (canvases.length === 0) throw new Error("No canvases in manifest");
 
@@ -210,6 +218,29 @@ async function processImage(img) {
           }
         }
       }
+    }
+  }
+
+  // Filter out extreme aspect ratio detections (horizontal lines, ornaments)
+  // using 3-sigma: reject anything outside mean ± 3 * stddev
+  if (entries.length > 0) {
+    const ratios = entries.map((e) => {
+      const w = e.symBox.x1 - e.symBox.x0;
+      const h = e.symBox.y1 - e.symBox.y0;
+      return w / h;
+    });
+    const mean = ratios.reduce((a, b) => a + b, 0) / ratios.length;
+    const variance = ratios.reduce((a, r) => a + (r - mean) ** 2, 0) / ratios.length;
+    const stddev = Math.sqrt(variance);
+    const lo = mean - 3 * stddev;
+    const hi = mean + 3 * stddev;
+
+    const before = entries.length;
+    for (let i = entries.length - 1; i >= 0; i--) {
+      if (ratios[i] < lo || ratios[i] > hi) entries.splice(i, 1);
+    }
+    if (entries.length < before) {
+      console.log(`Aspect ratio filter: removed ${before - entries.length} outliers (3σ range: ${lo.toFixed(2)}–${hi.toFixed(2)})`);
     }
   }
 

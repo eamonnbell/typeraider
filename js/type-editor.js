@@ -1,9 +1,10 @@
 /**
  * type-editor.js — Typing UI that renders random glyph variants per keystroke.
  *
- * Uses a hidden textarea to capture input via beforeinput events, which works
- * reliably on both desktop and mobile virtual keyboards (the standard pattern
- * used by VS Code, CodeMirror, Monaco, etc.).
+ * Uses a hidden textarea with a sentinel character to capture input. We detect
+ * typing vs deletion by comparing the textarea value after each input event.
+ * This is the standard pattern (CodeMirror, Monaco, etc.) and works reliably
+ * on Android virtual keyboards where beforeinput often fails for backspace.
  */
 
 import { getRandomVariant, hasGlyph, onChange } from "./repertoire.js";
@@ -12,6 +13,10 @@ let editorEl = null;
 let hiddenInput = null;
 let hasContent = false;
 let enabled = false;
+
+// Sentinel: we keep the textarea value as this single character so Android
+// always has something to delete. After each input event we reset to this.
+const SENTINEL = "\u200B"; // zero-width space
 
 const FRUITY_LOREM = [
   "MANGO PAPAYA GUAVA LYCHEE DRAGONFRUIT PASSIONFRUIT KUMQUAT PERSIMMON POMELO STARFRUIT",
@@ -60,8 +65,10 @@ export function initEditor() {
     editorEl.classList.remove("focused");
   });
 
-  // Unified input handling via beforeinput — works on mobile and desktop
-  hiddenInput.addEventListener("beforeinput", handleBeforeInput);
+  // Use input event with sentinel for robust mobile support (esp. backspace)
+  hiddenInput.addEventListener("input", handleInput);
+  // Also catch Enter via keydown since it may not appear in input event data
+  hiddenInput.addEventListener("keydown", handleKeydown);
 
   clearBtn.addEventListener("click", clearEditor);
   exportBtn.addEventListener("click", exportEditor);
@@ -75,52 +82,59 @@ export function initEditor() {
   });
 }
 
+function resetSentinel() {
+  hiddenInput.value = SENTINEL;
+  hiddenInput.selectionStart = hiddenInput.selectionEnd = 1;
+}
+
 function enableEditor() {
   enabled = true;
-  // Remove contenteditable since we use the hidden textarea now
   editorEl.removeAttribute("contenteditable");
   editorEl.innerHTML = "";
   editorEl.appendChild(hiddenInput);
   hasContent = false;
   document.getElementById("editor-controls").hidden = false;
+  resetSentinel();
   hiddenInput.focus();
 }
 
-function handleBeforeInput(e) {
-  e.preventDefault();
+function handleInput() {
+  const val = hiddenInput.value;
 
-  const inputType = e.inputType;
-
-  if (inputType === "deleteContentBackward" || inputType === "deleteContentForward") {
-    const last = editorEl.lastElementChild;
-    if (last && last !== hiddenInput) last.remove();
-    if (editorEl.children.length <= 1) hasContent = false; // only hiddenInput remains
-    return;
+  if (val.length < SENTINEL.length) {
+    // Sentinel was deleted → backspace
+    const prev = hiddenInput.previousElementSibling;
+    if (prev) prev.remove();
+    if (editorEl.children.length <= 1) hasContent = false;
+  } else if (val.length > SENTINEL.length) {
+    // New characters were inserted — extract everything that isn't the sentinel
+    const typed = val.replace(SENTINEL, "");
+    for (const char of typed) {
+      insertChar(char);
+    }
+    scrollToBottom();
   }
 
-  if (inputType === "insertLineBreak" || inputType === "insertParagraph") {
+  // Always reset to sentinel
+  resetSentinel();
+}
+
+function handleKeydown(e) {
+  if (e.key === "Enter") {
+    e.preventDefault();
     const br = document.createElement("div");
     br.className = "newline";
     editorEl.insertBefore(br, hiddenInput);
     hasContent = true;
     scrollToBottom();
-    return;
   }
-
-  if (inputType === "insertText" && e.data) {
-    for (const char of e.data) {
-      insertChar(char);
-    }
-    scrollToBottom();
-    return;
-  }
-
-  // insertCompositionText, insertFromPaste, etc. — extract characters
-  if (e.data) {
-    for (const char of e.data) {
-      insertChar(char);
-    }
-    scrollToBottom();
+  // Backspace fallback for desktop (in case input event doesn't capture it)
+  if (e.key === "Backspace") {
+    e.preventDefault();
+    const prev = hiddenInput.previousElementSibling;
+    if (prev) prev.remove();
+    if (editorEl.children.length <= 1) hasContent = false;
+    resetSentinel();
   }
 }
 
@@ -185,6 +199,7 @@ function clearEditor() {
     editorEl.appendChild(hiddenInput);
   }
   hasContent = false;
+  resetSentinel();
   hiddenInput.focus();
 }
 
