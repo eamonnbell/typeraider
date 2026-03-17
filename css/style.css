@@ -310,6 +310,7 @@ main {
 }
 
 #type-editor {
+  position: relative;
   min-height: 200px;
   padding: 1rem;
   background: #faf7f2;
@@ -331,6 +332,35 @@ main {
   color: #aaa;
   font-style: italic;
   pointer-events: none;
+}
+
+/* Hidden textarea for capturing keyboard input (mobile + desktop) */
+#hidden-input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: none;
+  outline: none;
+  resize: none;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Blinking cursor when editor is focused */
+#type-editor.focused::after {
+  content: "";
+  display: inline-block;
+  width: 2px;
+  height: 1.8em;
+  background: #c0392b;
+  vertical-align: baseline;
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
 }
 
 #type-editor .glyph-img {

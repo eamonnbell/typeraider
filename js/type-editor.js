@@ -1,11 +1,17 @@
 /**
  * type-editor.js — Typing UI that renders random glyph variants per keystroke.
+ *
+ * Uses a hidden textarea to capture input via beforeinput events, which works
+ * reliably on both desktop and mobile virtual keyboards (the standard pattern
+ * used by VS Code, CodeMirror, Monaco, etc.).
  */
 
 import { getRandomVariant, hasGlyph, onChange } from "./repertoire.js";
 
 let editorEl = null;
+let hiddenInput = null;
 let hasContent = false;
+let enabled = false;
 
 const FRUITY_LOREM = [
   "MANGO PAPAYA GUAVA LYCHEE DRAGONFRUIT PASSIONFRUIT KUMQUAT PERSIMMON POMELO STARFRUIT",
@@ -20,86 +26,129 @@ const FRUITY_LOREM = [
   "GOOSEBERRY FOOL REQUIRES NEITHER GEESE NOR FOOLS JUST CREAM AND COURAGE",
 ];
 
+export function resetEditor() {
+  enabled = false;
+  hasContent = false;
+}
+
 export function initEditor() {
   editorEl = document.getElementById("type-editor");
-  const controls = document.getElementById("editor-controls");
   const clearBtn = document.getElementById("clear-editor");
   const exportBtn = document.getElementById("export-editor");
   const loremBtn = document.getElementById("lorem-btn");
 
-  editorEl.addEventListener("keydown", handleKey);
+  // Create the hidden textarea for capturing keyboard input
+  hiddenInput = document.createElement("textarea");
+  hiddenInput.id = "hidden-input";
+  hiddenInput.setAttribute("autocapitalize", "off");
+  hiddenInput.setAttribute("autocomplete", "off");
+  hiddenInput.setAttribute("autocorrect", "off");
+  hiddenInput.setAttribute("spellcheck", "false");
+  hiddenInput.setAttribute("aria-label", "Type editor input");
+  editorEl.appendChild(hiddenInput);
+
+  // Tapping the editor focuses the hidden input (opens virtual keyboard)
+  editorEl.addEventListener("click", () => {
+    if (enabled) hiddenInput.focus();
+  });
+
+  // Reflect focus state on the editor for visual cursor
+  hiddenInput.addEventListener("focus", () => {
+    editorEl.classList.add("focused");
+  });
+  hiddenInput.addEventListener("blur", () => {
+    editorEl.classList.remove("focused");
+  });
+
+  // Unified input handling via beforeinput — works on mobile and desktop
+  hiddenInput.addEventListener("beforeinput", handleBeforeInput);
+
   clearBtn.addEventListener("click", clearEditor);
   exportBtn.addEventListener("click", exportEditor);
   loremBtn.addEventListener("click", insertLorem);
 
   // Enable editor when first glyph arrives
   onChange(() => {
-    if (!editorEl.isContentEditable) {
+    if (!enabled) {
       enableEditor();
     }
   });
 }
 
 function enableEditor() {
-  editorEl.contentEditable = "true";
+  enabled = true;
+  // Remove contenteditable since we use the hidden textarea now
+  editorEl.removeAttribute("contenteditable");
   editorEl.innerHTML = "";
+  editorEl.appendChild(hiddenInput);
   hasContent = false;
   document.getElementById("editor-controls").hidden = false;
-  editorEl.focus();
+  hiddenInput.focus();
 }
 
-function handleKey(e) {
+function handleBeforeInput(e) {
   e.preventDefault();
 
-  if (e.key === "Backspace") {
+  const inputType = e.inputType;
+
+  if (inputType === "deleteContentBackward" || inputType === "deleteContentForward") {
     const last = editorEl.lastElementChild;
-    if (last) last.remove();
-    if (!editorEl.children.length) hasContent = false;
+    if (last && last !== hiddenInput) last.remove();
+    if (editorEl.children.length <= 1) hasContent = false; // only hiddenInput remains
     return;
   }
 
-  if (e.key === "Enter") {
+  if (inputType === "insertLineBreak" || inputType === "insertParagraph") {
     const br = document.createElement("div");
     br.className = "newline";
-    editorEl.appendChild(br);
+    editorEl.insertBefore(br, hiddenInput);
     hasContent = true;
     scrollToBottom();
     return;
   }
 
-  if (e.key === " ") {
+  if (inputType === "insertText" && e.data) {
+    for (const char of e.data) {
+      insertChar(char);
+    }
+    scrollToBottom();
+    return;
+  }
+
+  // insertCompositionText, insertFromPaste, etc. — extract characters
+  if (e.data) {
+    for (const char of e.data) {
+      insertChar(char);
+    }
+    scrollToBottom();
+  }
+}
+
+function insertChar(char) {
+  if (char === " ") {
     const sp = document.createElement("span");
     sp.className = "space-char";
     sp.textContent = "\u00A0";
-    editorEl.appendChild(sp);
+    editorEl.insertBefore(sp, hiddenInput);
     hasContent = true;
-    scrollToBottom();
     return;
   }
 
-  // Only handle printable single characters
-  if (e.key.length !== 1) return;
-
-  const char = e.key;
   const variant = getRandomVariant(char);
-
   if (variant) {
     const img = document.createElement("img");
     img.className = "glyph-img";
     img.src = variant.dataUrl;
     img.alt = char;
     img.draggable = false;
-    editorEl.appendChild(img);
+    editorEl.insertBefore(img, hiddenInput);
   } else {
-    // Fallback: render as text
     const span = document.createElement("span");
     span.className = "fallback-char";
     span.textContent = char;
-    editorEl.appendChild(span);
+    editorEl.insertBefore(span, hiddenInput);
   }
-
   hasContent = true;
-  scrollToBottom();
 }
 
 function scrollToBottom() {
@@ -113,31 +162,11 @@ function insertLorem() {
     if (li > 0 || hasContent) {
       const br = document.createElement("div");
       br.className = "newline";
-      editorEl.appendChild(br);
+      editorEl.insertBefore(br, hiddenInput);
     }
     for (let i = 0; i < lines[li].length; i++) {
       const ch = lines[li][i];
-      if (ch === " ") {
-        const sp = document.createElement("span");
-        sp.className = "space-char";
-        sp.textContent = "\u00A0";
-        editorEl.appendChild(sp);
-      } else {
-        const variant = getRandomVariant(ch);
-        if (variant) {
-          const img = document.createElement("img");
-          img.className = "glyph-img";
-          img.src = variant.dataUrl;
-          img.alt = ch;
-          img.draggable = false;
-          editorEl.appendChild(img);
-        } else {
-          const span = document.createElement("span");
-          span.className = "fallback-char";
-          span.textContent = ch;
-          editorEl.appendChild(span);
-        }
-      }
+      insertChar(ch);
     }
   }
   hasContent = true;
@@ -145,9 +174,18 @@ function insertLorem() {
 }
 
 function clearEditor() {
-  editorEl.innerHTML = "";
+  // Remove all children except the hidden input
+  while (editorEl.firstChild) {
+    if (editorEl.firstChild === hiddenInput) break;
+    editorEl.firstChild.remove();
+  }
+  // If hiddenInput got removed somehow, re-add it
+  if (!editorEl.contains(hiddenInput)) {
+    editorEl.innerHTML = "";
+    editorEl.appendChild(hiddenInput);
+  }
   hasContent = false;
-  editorEl.focus();
+  hiddenInput.focus();
 }
 
 function exportEditor() {
@@ -155,6 +193,9 @@ function exportEditor() {
   const height = editorEl.scrollHeight;
 
   const clone = editorEl.cloneNode(true);
+  // Remove the hidden input from the clone
+  const cloneInput = clone.querySelector("#hidden-input");
+  if (cloneInput) cloneInput.remove();
   clone.style.width = width + "px";
   clone.style.position = "absolute";
   clone.style.left = "-9999px";
@@ -175,6 +216,7 @@ function exportEditor() {
   const glyphHeight = 32;
 
   for (const child of editorEl.children) {
+    if (child === hiddenInput) continue;
     if (child.classList.contains("newline")) {
       x = 16;
       y += lineHeight;

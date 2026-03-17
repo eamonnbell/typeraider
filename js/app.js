@@ -7,7 +7,7 @@
 
 import { addGlyph, onChange, totalCount, totalCountUnfiltered, getAllKeys, getVariants, getRandomVariant, setFilters, getAreaRange, getConfidenceRange, getDensityRange, getAllValues, clear as clearRepertoire } from "./repertoire.js";
 import { extractFragment, analysePageStats } from "./fragment.js";
-import { initEditor } from "./type-editor.js";
+import { initEditor, resetEditor } from "./type-editor.js";
 
 // DOM refs
 const fileInput = document.getElementById("file-input");
@@ -498,12 +498,50 @@ document.getElementById("clear-repertoire").addEventListener("click", () => {
   prompt.textContent = "Drop an image here or click to upload";
   prompt.hidden = false;
   document.getElementById("editor-controls").hidden = true;
-  document.getElementById("type-editor").contentEditable = "false";
-  document.getElementById("type-editor").innerHTML =
-    '<span class="placeholder">Upload an image to start raiding glyphs…</span>';
+  resetEditor();
+  const editorEl = document.getElementById("type-editor");
+  const hiddenInput = document.getElementById("hidden-input");
+  // Remove all children except the hidden textarea, then add placeholder
+  while (editorEl.firstChild) {
+    if (editorEl.firstChild === hiddenInput) break;
+    editorEl.firstChild.remove();
+  }
+  const placeholder = document.createElement("span");
+  placeholder.className = "placeholder";
+  placeholder.textContent = "Upload an image to start raiding glyphs\u2026";
+  editorEl.insertBefore(placeholder, editorEl.firstChild);
   filtersInitialized = false;
   document.getElementById("repertoire-filters").hidden = true;
 });
+
+// ── Share target pickup ──
+
+async function checkSharedImage() {
+  const params = new URL(location.href).searchParams;
+  if (!params.has("shared")) return;
+
+  try {
+    const cache = await caches.open("typeraider-share");
+    const resp = await cache.match("/shared-image");
+    if (resp) {
+      const blob = await resp.blob();
+      await cache.delete("/shared-image");
+      history.replaceState(null, "", "/");
+
+      // Feed into image processing pipeline
+      const img = new Image();
+      img.onload = () => {
+        sourceImage = img;
+        uploadArea.querySelector(".upload-prompt").textContent = "Shared image";
+        showPreview(img);
+        processImage(img);
+      };
+      img.src = URL.createObjectURL(blob);
+    }
+  } catch (err) {
+    console.warn("Share target pickup failed:", err);
+  }
+}
 
 // ── Init ──
 
@@ -513,3 +551,4 @@ onChange(() => {
   if (filtersInitialized) updateHistograms();
 });
 initEditor();
+checkSharedImage();
