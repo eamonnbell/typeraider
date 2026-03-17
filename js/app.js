@@ -477,6 +477,11 @@ fileInput.addEventListener("change", () => {
   if (fileInput.files[0]) handleFile(fileInput.files[0]);
 });
 
+const cameraInput = document.getElementById("camera-input");
+cameraInput.addEventListener("change", () => {
+  if (cameraInput.files[0]) handleFile(cameraInput.files[0]);
+});
+
 // ── Live title: spell "TypeRaider" from repertoire as glyphs stream in ──
 
 const TITLE_WORD = "TYPERAIDER";

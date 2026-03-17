@@ -20,6 +20,12 @@
     <p class="subtitle">Raid letterforms from images. Type with found glyphs.</p>
   </header>
 
+  <div id="install-banner" hidden>
+    <p>Install TypeRaider for offline use and easy image sharing</p>
+    <button id="install-btn">Install</button>
+    <button id="install-dismiss" aria-label="Dismiss">&times;</button>
+  </div>
+
   <main>
     <section id="upload-section">
       <label id="upload-area" for="file-input">
@@ -27,7 +33,11 @@
         <canvas id="preview-canvas" hidden></canvas>
         <input type="file" id="file-input" accept="image/*" hidden>
       </label>
-      <button id="random-page">or try a random page from <em>A Convenient Book of Alphabets</em> (1876, public domain)</button>
+      <label id="camera-btn" class="source-btn">
+        Take photo
+        <input type="file" id="camera-input" accept="image/*" capture="environment" hidden>
+      </label>
+      <button id="random-page" class="source-btn">or try a random page from <em>A Convenient Book of Alphabets</em> (1876, public domain)</button>
       <div id="progress-bar" hidden>
         <div id="progress-fill"></div>
         <span id="progress-text"></span>
@@ -89,6 +99,38 @@
   <script>
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("sw.js");
+    }
+
+    // PWA install prompt
+    let deferredPrompt = null;
+    const banner = document.getElementById("install-banner");
+    const installBtn = document.getElementById("install-btn");
+    const dismissBtn = document.getElementById("install-dismiss");
+
+    window.addEventListener("beforeinstallprompt", (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      if (!localStorage.getItem("pwa-install-dismissed")) {
+        banner.hidden = false;
+      }
+    });
+
+    installBtn.addEventListener("click", async () => {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      banner.hidden = true;
+    });
+
+    dismissBtn.addEventListener("click", () => {
+      banner.hidden = true;
+      localStorage.setItem("pwa-install-dismissed", "1");
+    });
+
+    // Hide banner if already installed (standalone mode)
+    if (window.matchMedia("(display-mode: standalone)").matches) {
+      banner.hidden = true;
     }
   </script>
 </body>
