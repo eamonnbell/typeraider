@@ -2,7 +2,7 @@
   "name": "TypeRaider",
   "short_name": "TypeRaider",
   "description": "Raid letterforms from images. Type with found glyphs.",
-  "start_url": "/",
+  "start_url": "/typeraider/",
   "display": "standalone",
   "background_color": "#f5f0e8",
   "theme_color": "#c0392b",
@@ -26,7 +26,7 @@
     }
   ],
   "share_target": {
-    "action": "/",
+    "action": "/typeraider/",
     "method": "POST",
     "enctype": "multipart/form-data",
     "params": {

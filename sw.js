@@ -13,15 +13,17 @@ const SHELL_CACHE = `typeraider-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `typeraider-runtime-${CACHE_VERSION}`;
 const SHARE_CACHE = "typeraider-share";
 
+const BASE = "/typeraider/";
+
 const SHELL_URLS = [
-  "/",
-  "/index.html",
-  "/css/style.css",
-  "/js/app.js",
-  "/js/repertoire.js",
-  "/js/type-editor.js",
-  "/js/fragment.js",
-  "/icons/icon.svg",
+  BASE,
+  BASE + "index.html",
+  BASE + "css/style.css",
+  BASE + "js/app.js",
+  BASE + "js/repertoire.js",
+  BASE + "js/type-editor.js",
+  BASE + "js/fragment.js",
+  BASE + "icons/icon.svg",
 ];
 
 // ── Install: precache app shell ──
@@ -53,8 +55,8 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
 
-  // Share target: intercept POST to "/" — stash the shared image
-  if (event.request.method === "POST" && url.pathname === "/") {
+  // Share target: intercept POST to app base — stash the shared image
+  if (event.request.method === "POST" && url.pathname === BASE) {
     event.respondWith(handleShareTarget(event.request));
     return;
   }
@@ -122,10 +124,10 @@ async function handleShareTarget(request) {
 
   if (file) {
     const cache = await caches.open(SHARE_CACHE);
-    await cache.put("/shared-image", new Response(file));
-    return Response.redirect("/?shared=1", 303);
+    await cache.put(BASE + "shared-image", new Response(file));
+    return Response.redirect(BASE + "?shared=1", 303);
   }
 
   // No file in the share — just redirect to app
-  return Response.redirect("/", 303);
+  return Response.redirect(BASE, 303);
 }

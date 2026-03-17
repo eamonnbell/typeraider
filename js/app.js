@@ -522,11 +522,12 @@ async function checkSharedImage() {
 
   try {
     const cache = await caches.open("typeraider-share");
-    const resp = await cache.match("/shared-image");
+    const base = new URL(".", location.href).pathname;
+    const resp = await cache.match(base + "shared-image");
     if (resp) {
       const blob = await resp.blob();
-      await cache.delete("/shared-image");
-      history.replaceState(null, "", "/");
+      await cache.delete(base + "shared-image");
+      history.replaceState(null, "", base);
 
       // Feed into image processing pipeline
       const img = new Image();
