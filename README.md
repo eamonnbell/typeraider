@@ -64,4 +64,4 @@ tasks, and dead ends.
 
 ## License
 
-MIT
+Creative Commons Zero v1.0 Universal
